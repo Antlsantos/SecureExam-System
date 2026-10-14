@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avaliação Online - Monitorizada</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+
+    .screen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .card {
+      background: #2a2a2a;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 520px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    h1 { margin-bottom: 15px; color: #4facfe; }
+    p { margin-bottom: 20px; color: #ccc; line-height: 1.5; }
+
+    ul {
+      text-align: left;
+      margin-bottom: 25px;
+      padding-left: 20px;
+      color: #ff6b6b;
+    }
+
+    ul li { margin-bottom: 8px; }
+
+    button {
+      background: #4facfe;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #00f2fe; }
+
+    /* Tela de Monitorização Ativa */
+    #active-screen {
+      display: none;
+    }
+
+    /* Tela de Anulação */
+    #blocked-screen {
+      display: none;
+      background-color: #721c24;
+      color: #f8d7da;
+    }
+
+    #blocked-screen h1 { color: #ff4d4d; font-size: 32px; }
+    #blocked-screen p { color: #f8d7da; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- 1. TELA INICIAL -->
+  <div id="start-screen" class="screen">
+    <div class="card">
+      <h1>Avaliação Online</h1>
+      <p>A prova do Wayground será aberta numa janela dedicada enquanto esta página monitoriza a sessão.</p>
+      
+      <ul>
+        <li>A prova deve ser realizada com a janela principal em <strong>Ecrã Inteiro</strong>.</li>
+        <li><strong>NÃO</strong> mude de separador (aba) nem minimize o navegador.</li>
+        <li><strong>NÃO</strong> saia do modo de ecrã inteiro.</li>
+        <li>Qualquer tentativa de saída <strong>ANULARÁ</strong> a avaliação.</li>
+      </ul>
+
+      <button id="btn-start">Iniciar Prova Monitorizada</button>
+    </div>
+  </div>
+
+  <!-- 2. TELA DE MONITORIZAÇÃO EM CURSO -->
+  <div id="active-screen" class="screen">
+    <div class="card" style="border: 2px solid #4facfe;">
+      <h1 style="color: #4facfe;">Avaliação em Curso</h1>
+      <p>A janela da avaliação (Wayground) foi aberta.</p>
+      <p style="color: #ffbd2e; font-weight: bold; margin-top: 10px;">
+        ⚠️ Mantenha esta página em ecrã inteiro e responda na janela do Wayground.
+      </p>
+    </div>
+  </div>
+
+  <!-- 3. TELA DE ANULAÇÃO POR INFRAÇÃO -->
+  <div id="blocked-screen" class="screen">
+    <div class="card" style="background: #3a0000; border: 2px solid #ff4d4d;">
+      <h1>AVALIAÇÃO ANULADA!</h1>
+      <p id="reason-text">Foi detetada uma infração durante a realização da prova.</p>
+      <p style="font-size: 14px; opacity: 0.8; margin-top: 15px;">
+        Entre em contacto com o professor para solicitar a reabertura da prova.
+      </p>
+      <button onclick="location.reload()" style="background: #ff4d4d; margin-top: 15px;">
+        Tentar Novamente
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ===============================================================
+    // INSIRA AQUI O LINK DA SUA PROVA/SESSÃO DO WAYGROUND:
+    // ===============================================================
+    const WAYGROUND_URL = "https://wayground.com/join/game/U2FsdGVkX1%252Fgt91c8iz0m44JdhLDU5O70USKOJ9EGabw9ywprZmaaYqhrGovKBzZCs2qKVgvrq2LoOQZKSjF2g%253D%253D?preview=true&test_mode_preview=true&gameType=solo"; 
+
+    let examStarted = false;
+    let popupWindow = null;
+    let checkInterval = null;
+
+    const startScreen = document.getElementById('start-screen');
+    const activeScreen = document.getElementById('active-screen');
+    const blockedScreen = document.getElementById('blocked-screen');
+    const btnStart = document.getElementById('btn-start');
+    const reasonText = document.getElementById('reason-text');
+
+    btnStart.addEventListener('click', () => {
+      // Solicitar Ecrã Inteiro na página de monitorização
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      } else if (document.documentElement.webkitRequestFullscreen) {
+        document.documentElement.webkitRequestFullscreen();
+      }
+
+      // Abrir o Wayground numa janela dedicada
+      const width = 1100;
+      const height = 750;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+
+      popupWindow = window.open(
+        WAYGROUND_URL,
+        'WaygroundExam',
+        `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes`
+      );
+
+      if (!popupWindow) {
+        alert("O seu navegador bloqueou a janela pop-up. Por favor, permita pop-ups nas definições do navegador para realizar a avaliação.");
+        return;
+      }
+
+      startScreen.style.display = 'none';
+      activeScreen.style.display = 'flex';
+
+      setTimeout(() => {
+        examStarted = true;
+      }, 1500);
+
+      // Verificar periodicamente se o aluno fechou a janela do Wayground
+      checkInterval = setInterval(() => {
+        if (examStarted && popupWindow && popupWindow.closed) {
+          invalidateExam("A janela da avaliação foi fechada antes de concluir.");
+        }
+      }, 1000);
+    });
+
+    // Função para anular a avaliação
+    function invalidateExam(reason) {
+      if (!examStarted) return;
+      
+      examStarted = false;
+      if (checkInterval) clearInterval(checkInterval);
+      
+      if (popupWindow && !popupWindow.closed) {
+        popupWindow.close();
+      }
+      
+      activeScreen.style.display = 'none';
+      reasonText.innerText = reason;
+      blockedScreen.style.display = 'flex';
+
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    // 1. Detetar se o aluno mudou de separador (aba) ou minimizou o navegador
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && examStarted) {
+        invalidateExam("Alterou de separador ou minimizou o navegador.");
+      }
+    });
+
+    // 2. Detetar se saiu do modo de Ecrã Inteiro
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && examStarted) {
+        invalidateExam("Saiu do modo de Ecrã Inteiro.");
+      }
+    });
+
+    // 3. Bloquear botão direito do rato e atalhos de teclado
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (e.key === "F12" || 
+         (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+         (e.ctrlKey && e.key === 'c') || 
+         (e.ctrlKey && e.key === 'v')) {
+        e.preventDefault();
+      }
+    });
+  </script>
+</body>
+</html>
